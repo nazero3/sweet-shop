@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { clearCart, getCart, getSelectedStore } from "../../lib/cart";
 import { detectLang, t, type Lang } from "../../lib/i18n";
+import { getApiBaseUrl } from "../../lib/config";
 
 export default function CheckoutPage(): React.ReactElement {
   const [loading, setLoading] = useState(false);
@@ -46,7 +47,7 @@ export default function CheckoutPage(): React.ReactElement {
 
     const subtotal = items.reduce((acc, item) => acc + item.lineTotal, 0);
     setLoading(true);
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders`, {
+    const response = await fetch(`${getApiBaseUrl()}/orders`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -72,38 +73,44 @@ export default function CheckoutPage(): React.ReactElement {
   }
 
   return (
-    <main style={{ padding: 16 }}>
-      <h1>{t(lang, "checkoutTitle")}</h1>
-      <input placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
-      <br />
-      <input placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
-      <br />
-      <input placeholder="Email (optional)" value={email} onChange={(e) => setEmail(e.target.value)} />
-      <br />
-      <select value={type} onChange={(e) => setType(e.target.value as "DELIVERY" | "PICKUP")}>
-        <option value="DELIVERY">Delivery</option>
-        <option value="PICKUP">Pickup</option>
-      </select>
-      <br />
-      {type === "DELIVERY" ? (
-        <>
+    <main>
+      <section className="hero">
+        <span className="chip">{lang === "ar" ? "طلب كضيف" : "Guest Checkout"}</span>
+        <h1>{t(lang, "checkoutTitle")}</h1>
+        <p>
+          {lang === "ar"
+            ? "أكمل طلبك خلال دقيقة واحدة فقط. الدفع نقدا عند التوصيل أو الاستلام."
+            : "Complete your order in under one minute. Cash payment on delivery or pickup."}
+        </p>
+      </section>
+      <section className="card" style={{ marginTop: "1.2rem" }}>
+        <div className="form-grid">
+          <input className="input" placeholder={t(lang, "fullName")} value={name} onChange={(e) => setName(e.target.value)} />
+          <input className="input" placeholder={t(lang, "phone")} value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <input className="input" placeholder={t(lang, "emailOptional")} value={email} onChange={(e) => setEmail(e.target.value)} />
+          <select className="select" value={type} onChange={(e) => setType(e.target.value as "DELIVERY" | "PICKUP")}>
+            <option value="DELIVERY">{t(lang, "delivery")}</option>
+            <option value="PICKUP">{t(lang, "pickup")}</option>
+          </select>
+          {type === "DELIVERY" ? (
+            <textarea
+              className="textarea"
+              placeholder={t(lang, "deliveryAddress")}
+              value={deliveryAddress}
+              onChange={(e) => setDeliveryAddress(e.target.value)}
+            />
+          ) : null}
           <textarea
-            placeholder="Delivery address"
-            value={deliveryAddress}
-            onChange={(e) => setDeliveryAddress(e.target.value)}
+            className="textarea"
+            placeholder={t(lang, "specialNote")}
+            value={specialNote}
+            onChange={(e) => setSpecialNote(e.target.value)}
           />
-          <br />
-        </>
-      ) : null}
-      <textarea
-        placeholder="Special instruction note (optional)"
-        value={specialNote}
-        onChange={(e) => setSpecialNote(e.target.value)}
-      />
-      <br />
-      <button onClick={() => void submitOrder()} disabled={loading}>
-        {loading ? "Submitting..." : "Submit cash order"}
-      </button>
+          <button className="btn btn-primary" onClick={() => void submitOrder()} disabled={loading}>
+            {loading ? t(lang, "submitting") : t(lang, "submitCashOrder")}
+          </button>
+        </div>
+      </section>
       {error ? <p style={{ color: "crimson" }}>{error}</p> : null}
       {orderNumber ? <p>Order confirmed: {orderNumber}</p> : null}
     </main>

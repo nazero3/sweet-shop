@@ -9,12 +9,12 @@ import { PrismaClient, OrderStatus, OrderType } from "@prisma/client";
 import { Server } from "socket.io";
 import { createClient } from "redis";
 import { z } from "zod";
-import { ORDER_ID_PREFIX } from "@sweet-shop/shared/src";
 import type { Request, Response, NextFunction } from "express";
 import { NotificationService } from "./services/notification/notification-service";
 import type { NotificationChannel } from "./services/notification/types";
 
 const prisma = new PrismaClient();
+const ORDER_ID_PREFIX = "SS";
 const redis = createClient({ url: process.env.REDIS_URL });
 redis.on("error", (error) => {
   // eslint-disable-next-line no-console
@@ -32,6 +32,42 @@ type JwtPayload = { adminId: string; role: "OWNER" };
 type NotificationPreferences = Record<NotificationChannel, boolean>;
 type NotificationJob = { orderId: string; channel: NotificationChannel; attempt: number };
 const notificationService = new NotificationService();
+const SYRIAN_STATES = new Set(["دمشق", "حلب", "حمص", "damascus", "aleppo", "homs"]);
+const FALLBACK_SYRIAN_STORES = [
+  {
+    id: "fallback-damascus",
+    name: "Sweet Shop Damascus",
+    state: "دمشق",
+    address: "شارع بغداد، دمشق، سوريا",
+    phone: "+963-11-222-3344",
+    email: "damascus@sweetshop.com",
+    operatingHours: { everyday: "09:00-22:00" },
+    deliveryZones: ["المالكي", "أبو رمانة", "المزة"],
+    isActive: true
+  },
+  {
+    id: "fallback-aleppo",
+    name: "Sweet Shop Aleppo",
+    state: "حلب",
+    address: "السبع بحرات، حلب، سوريا",
+    phone: "+963-21-555-2211",
+    email: "aleppo@sweetshop.com",
+    operatingHours: { everyday: "09:00-22:00" },
+    deliveryZones: ["السليمانية", "الجميلية", "الميدان"],
+    isActive: true
+  },
+  {
+    id: "fallback-homs",
+    name: "Sweet Shop Homs",
+    state: "حمص",
+    address: "شارع الحضارة، حمص، سوريا",
+    phone: "+963-31-444-1100",
+    email: "homs@sweetshop.com",
+    operatingHours: { everyday: "09:00-22:00" },
+    deliveryZones: ["عكرمة", "الوعر", "بابا عمرو"],
+    isActive: true
+  }
+] as const;
 
 const orderPayloadSchema = z.object({
   storeId: z.string(),
@@ -263,10 +299,15 @@ app.post("/auth/admin/login", async (req, res) => {
 
 app.get("/stores", async (_req, res) => {
   const cached = await getCache<Awaited<ReturnType<typeof prisma.store.findMany>>>("stores:active");
-  if (cached) return res.json(cached);
+  if (cached) {
+    const filteredCached = cached.filter((store) => SYRIAN_STATES.has(String(store.state).toLowerCase()));
+    if (filteredCached.length > 0) return res.json(filteredCached);
+  }
   const stores = await prisma.store.findMany({ where: { isActive: true }, orderBy: { state: "asc" } });
-  await setCache("stores:active", stores, 120);
-  res.json(stores);
+  const filteredStores = stores.filter((store) => SYRIAN_STATES.has(String(store.state).toLowerCase()));
+  const responseStores = filteredStores.length > 0 ? filteredStores : FALLBACK_SYRIAN_STORES;
+  await setCache("stores:active", responseStores, 120);
+  res.json(responseStores);
 });
 
 app.get("/menu", async (_req, res) => {

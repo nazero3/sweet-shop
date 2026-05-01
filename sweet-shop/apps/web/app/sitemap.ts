@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { getApiBaseUrl } from "../lib/config";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = process.env.NEXT_PUBLIC_WEB_URL ?? "http://localhost:3000";
@@ -8,8 +9,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: route === "" ? 1 : 0.8
   }));
 
-  const menuRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/menu`, { cache: "no-store" }).catch(() => null);
-  const storesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/stores`, { cache: "no-store" }).catch(() => null);
+  const apiBaseUrl = getApiBaseUrl();
+  const menuRes = await fetch(`${apiBaseUrl}/menu`, { cache: "no-store" }).catch(() => null);
+  const storesRes = await fetch(`${apiBaseUrl}/stores`, { cache: "no-store" }).catch(() => null);
   const categories = menuRes && menuRes.ok ? ((await menuRes.json()) as Array<{ slug: string; products: Array<{ slug: string }> }>) : [];
   const stores = storesRes && storesRes.ok ? ((await storesRes.json()) as Array<{ state: string }>) : [];
 

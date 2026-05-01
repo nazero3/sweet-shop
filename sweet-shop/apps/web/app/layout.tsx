@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import LanguageSwitcher from "../components/language-switcher";
+import SiteHeader from "../components/site-header";
 
 export const metadata: Metadata = {
   title: "Sweet Shop | Multi-State Online Ordering",
@@ -10,9 +10,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }): React.ReactElement {
   return (
     <html lang="en">
-      <body style={{ padding: 12 }}>
-        <LanguageSwitcher />
-        {children}
+      <body>
+        <SiteHeader />
+        <div className="container page-wrap">{children}</div>
       </body>
     </html>
   );

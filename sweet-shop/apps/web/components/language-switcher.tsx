@@ -14,6 +14,7 @@ export default function LanguageSwitcher(): React.ReactElement {
     const next = lang === "en" ? "ar" : "en";
     setLang(next);
     setCurrentLang(next);
+    document.cookie = `sweet-shop-lang=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
     window.location.reload();
   }
 
