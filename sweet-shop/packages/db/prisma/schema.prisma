@@ -1,0 +1,143 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderType {
+  DELIVERY
+  PICKUP
+}
+
+enum OrderStatus {
+  CONFIRMED
+  PREPARING
+  OUT_FOR_DELIVERY
+  READY_FOR_PICKUP
+  DELIVERED
+  COLLECTED
+}
+
+enum PaymentMethod {
+  CASH
+}
+
+enum PaymentStatus {
+  PENDING
+  COLLECTED
+}
+
+enum AdminRole {
+  OWNER
+}
+
+model Store {
+  id             String   @id @default(cuid())
+  name           String
+  state          String
+  address        String
+  phone          String
+  email          String?
+  operatingHours Json
+  deliveryZones  String[]
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  orders Order[]
+
+  @@index([state, isActive])
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        Json
+  description Json
+  price       Decimal  @db.Decimal(10, 2)
+  categoryId  String
+  imageUrl    String
+  isAvailable Boolean  @default(true)
+  slug        String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([categoryId, isAvailable])
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      Json
+  slug      String   @unique
+  imageUrl  String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+
+  @@index([sortOrder, isActive])
+}
+
+model Order {
+  id                String        @id @default(cuid())
+  orderNumber       String        @unique
+  storeId           String
+  storeState        String
+  type              OrderType
+  status            OrderStatus   @default(CONFIRMED)
+  customerName      String
+  customerPhone     String
+  customerEmail     String?
+  deliveryAddress   String?
+  items             Json
+  specialNote       String?
+  subtotal          Decimal       @db.Decimal(10, 2)
+  paymentMethod     PaymentMethod @default(CASH)
+  paymentStatus     PaymentStatus @default(PENDING)
+  notificationsSent Json
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  store         Store                 @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  notifications NotificationHistory[]
+
+  @@index([storeId, createdAt])
+  @@index([status, createdAt])
+  @@index([storeState, createdAt])
+}
+
+model Admin {
+  id                      String    @id @default(cuid())
+  name                    String
+  email                   String    @unique
+  phone                   String
+  passwordHash            String
+  notificationPreferences Json
+  role                    AdminRole @default(OWNER)
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+}
+
+model NotificationHistory {
+  id          String   @id @default(cuid())
+  orderId     String
+  channel     String
+  recipient   String
+  payload     Json
+  success     Boolean  @default(false)
+  retryCount  Int      @default(0)
+  failureReason String?
+  sentAt      DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, sentAt])
+  @@index([channel, success])
+}
